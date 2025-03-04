@@ -267,7 +267,7 @@ function mapToHtml(tablesData) {
           notification.style.display = 'block';
           setTimeout(function() {
             notification.style.display = 'none';
-          }, 2000);
+          }, 1000);
 
           // 一時的に作成したテキストエリアを削除
           document.body.removeChild(textArea);
@@ -285,8 +285,7 @@ function mapToHtml(tablesData) {
 
   htmlContent += `</div>`;
 
-  Object.keys(tablesData).forEach(tableName => {
-    const table = tablesData[tableName];
+  for (let [tableName, table] of tablesData) {
     const tableLogicName = table.tableLogicName || tableName;
     const columnCount = Object.keys(table.data[0] || {}).length - 1;
 
@@ -331,7 +330,7 @@ function mapToHtml(tablesData) {
     });
 
     htmlContent += `</tbody></table></div></div>`;
-  });
+  };
 
   htmlContent += `</body></html>`;
   return htmlContent;
