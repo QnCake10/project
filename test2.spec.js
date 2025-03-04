@@ -1,11 +1,18 @@
 const { test, expect } = require('@playwright/test');
+import * as allure from "allure-js-commons";
+import { ContentType } from "allure-js-commons";
 const fs = require('fs');
 const jsoncParser = require('jsonc-parser');
+const path = require('path');
+import { mapToDiff2Html, getInsertDataMap, mapToHtml } from 'C:/git/work/test/tests/common';
+
+// 出力用ファイル名
+const exportFileName = path.basename(__filename, path.extname(__filename));
 
 // JSONCファイルを読み込んで解析する
 const expectedResults = jsoncParser.parse(fs.readFileSync('./tests/expected-test1.jsonc', 'utf-8'));
 
-test('フォームの入力テスト', async ({ page }) => {
+test('フォームの入力テスト', async ({ page }, testInfo ) => {
   // HTMLページを開く
   await page.setContent(`
     <!DOCTYPE html>
@@ -52,143 +59,21 @@ test('フォームの入力テスト', async ({ page }) => {
 
   // 期待結果の確認
   await expect.soft(page.locator('[data-testid="fruit-select"]')).toHaveValue(expectedResults.fruitSelect.selectedOption);
-  
-  // SQLファイルを読み込む
+
   const sqlFilePath = './tests/test2.sql'; // 実際のSQLファイルのパス
-  const sqlContent = fs.readFileSync(sqlFilePath, 'utf-8');
+  const exportTestDataPath = exportFileName + '_TestData.html';
   
-  // 1行ずつ処理を行うために、改行で分割
-  const sqlLines = sqlContent.split('\n');
-  
-  // テーブルごとのデータを格納するオブジェクト
-  const tablesData = {};
-  
-  // コメントとSQLを統合してデータを抽出
-  let tableLogicName = '';  // テーブル論理名
-  let columnLogicNames = [];    // カラム論理名
-  let comment = '';     // コメント（データパターン）
-  
-  // コメントやINSERT文を処理
-  sqlLines.forEach(line => {
-    const trimmedLine = line.trim();
-    
-    // テーブル論理名のコメント行を処理
-    if (trimmedLine.startsWith('-- テーブル名：')) {
-      tableLogicName = trimmedLine.slice('-- テーブル名：'.length);  // テーブル名を抽出
-    }
-    
-    // カラム論理名のコメント行を処理
-    else if (trimmedLine.startsWith('-- カラム名：')) {
-      columnLogicNames = trimmedLine.slice('-- カラム名：'.length).split(',');  // カラム名を抽出
-      columnLogicNames.unshift(''); // コメント用の空列を追加
-    }
-    
-    // データパターンのコメント行を処理
-    else if (trimmedLine.startsWith('-- ')) {
-      comment = trimmedLine.slice('-- '.length);  // データパターンを抽出
-    }
-  
-    // INSERT INTO 文を処理
-    else if (trimmedLine.toUpperCase().startsWith('INSERT INTO')) {
-      const regex = /INSERT INTO (\w+)\s?\((.*?)\)\s?VALUES\s?\((.*?)\);/g;
-      const match = regex.exec(trimmedLine);
-      
-      if (match) {
-        const tableName = match[1];  // テーブル物理名
-        let columns = match[2].split(','); // カラム物理名
-        const values = match[3].split(','); // 値
-  
-        // テーブルの情報を格納
-        if (!tablesData[tableName]) {
-          tablesData[tableName] = {
-            tableLogicName: tableLogicName,  // テーブル論理名
-            columnLogicNames: columnLogicNames,  // カラム論理名
-            data: [],  // 行データ
-          };
-  
-          // リセット
-          tableLogicName = '';  // テーブル論理名
-          columnLogicNames = [];    // カラム論理名
-        }
-  
-        // 行データを追加
-        const rowData = {};
-        rowData['_comment'] = comment;
-        columns.forEach((col, index) => {
-          rowData[col] = values[index];
-        });
-  
-        tablesData[tableName].data.push(rowData);
-  
-        // コメントをリセット
-        comment = [];
-      }
-    }
-  });
-  
-  // 抽出されたデータを表示
-  console.log(tablesData);
-  
-  // HTMLに変換して表示
-  let htmlContent = `
-  <!DOCTYPE html>
-  <html lang="ja">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQL データ表示</title>
-    <style>
-      table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-      table, th, td { border: 1px solid black; }
-      th, td { padding: 8px; text-align: left; }
-      h2 { color: #007BFF; }
-    </style>
-  </head>
-  <body>
-    <h1>SQLテストデータ</h1>
-  `;
-  
-  Object.keys(tablesData).forEach(tableName => {
-    const table = tablesData[tableName];
-  
-    htmlContent += `
-      <h2>テーブル名: ${table.tableLogicName}</h2>
-      <table>
-        <thead>
-          <tr>
-            ${table.columnLogicNames.map(col => `<th>${col}</th>`).join('')}
-          </tr>
-          <tr>
-            ${Object.keys(table.data[0]).map(key => `<th>${key}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-    `;
-  
-    // カラム、値を追加
-    table.data.forEach(row => {
-      htmlContent += `
-        <tr>
-          ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
-        </tr>
-      `;
-    });
-  
-    htmlContent += `
-        </tbody>
-      </table>
-    `;
-  });
-  
-  htmlContent += `
-  </body>
-  </html>
-  `;
-  
+  const testDataMap = getInsertDataMap(sqlFilePath);
   // 結果のHTMLをファイルに保存
-  fs.writeFileSync('output.html', htmlContent);
-  console.log('HTMLファイルを作成しました。');
-  
+  await allure.attachment("before", mapToHtml(testDataMap), ContentType.HTML);
 
+  const sqlFilePath1 = './tests/test2_after.sql'; // 実際のSQLファイルのパス
+  const afterDataMap = getInsertDataMap(sqlFilePath1)
+  // 結果のHTMLをファイルに保存
+  await allure.attachment("after", mapToHtml(afterDataMap), ContentType.HTML);
 
+  // 結果のHTMLをファイルに保存
+  await allure.attachment("diff", mapToDiff2Html(testDataMap, afterDataMap), ContentType.HTML);
 });
+
+

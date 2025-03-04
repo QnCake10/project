@@ -1,0 +1,34 @@
+﻿{
+  // 名前入力フィールド
+  "nameInput": "テストユーザー",
+  
+  // 説明テキストエリア
+  "descriptionTextarea": {
+    "value": "これはテストの説明ですあ"
+  },
+  
+  // ニュースレター購読チェックボックス
+  "subscribeCheckbox": {
+    "isChecked": true
+  },
+  
+  // ラジオボタンの選択
+  "radioButton": {
+    "selectedOption": "option1"
+  },
+  
+  // ドロップダウンメニュー
+  "dropdownSelect": {
+    "selectedOption": "option2"
+  },
+  
+  // 果物選択セレクトボックス
+  "fruitSelect": {
+    "selectedOption": "orange"
+  },
+  
+  // 送信ボタンの状態
+  "submitButton": {
+    "isEnabled": true
+  }
+}
